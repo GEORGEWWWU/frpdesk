@@ -101,7 +101,6 @@
             </div>
             <button class="btn secondary align-bottom" @click="selectToml">浏览并加载</button>
           </div>
-          <p class="hint">当前所有设置仅在内存中暂存，重启软件后需重新指定路径（可后续引入 tauri-plugin-store 持久化）。</p>
         </div>
       </div>
     </div>
@@ -109,7 +108,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { open } from '@tauri-apps/plugin-dialog';
@@ -128,10 +127,17 @@ const currentTab = ref('software'); // 默认先引导用户去设置
 const isRunning = ref(false);
 const configLoaded = ref(false);
 
+// 初始化时优先从 localStorage 读取
 const appSettings = ref({
-  frpcPath: '',
-  configPath: ''
+  frpcPath: localStorage.getItem('frpcPath') || '',
+  configPath: localStorage.getItem('configPath') || ''
 });
+
+// 深度监听 settings 变化，一旦改变自动存入 localStorage
+watch(appSettings, (newVal) => {
+  localStorage.setItem('frpcPath', newVal.frpcPath);
+  localStorage.setItem('configPath', newVal.configPath);
+}, { deep: true });
 
 // 计算属性：判断是否准备好启动
 const isReady = computed(() => {
@@ -274,12 +280,25 @@ const chartOption = ref({
   }]
 });
 let timer;
-onMounted(() => {
+
+onMounted(async () => {
+  // Echarts 定时器逻辑 (保持原样)
   timer = setInterval(() => {
     chartData.value.push(isRunning.value ? Math.floor(Math.random() * 50) + 10 : 0);
     chartData.value.shift();
     chartOption.value.series[0].data = [...chartData.value];
   }, 1000);
+
+  // 如果本地存有配置文件路径，启动软件时自动加载
+  if (appSettings.value.configPath) {
+    try {
+      await loadRealConfig(appSettings.value.configPath);
+      // 可选：如果想一打开软件就直接跳到概览页，可以解除下面这行的注释
+      // currentTab.value = 'dashboard'; 
+    } catch (e) {
+      console.warn("自动加载上次的配置文件失败", e);
+    }
+  }
 });
 onUnmounted(() => clearInterval(timer));
 
