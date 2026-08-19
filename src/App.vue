@@ -2,13 +2,24 @@
   <div class="app-container">
     <!-- 顶部标题栏：去掉了父容器的 data-tauri-drag-region -->
     <div class="titlebar">
-      <!-- 按钮区域保持独立，不受拖拽覆盖 -->
-      <div class="window-controls">
-        <div class="control close" @click.stop="closeWindow" title="关闭"></div>
-        <div class="control minimize" @click.stop="minimizeWindow" title="最小化"></div>
-      </div>
       <!-- 仅在中间空白/文本区域开启拖拽 -->
-      <div class="title-text" data-tauri-drag-region>FRP Manager</div>
+      <div class="title-text" data-tauri-drag-region>FRP Desk</div>
+
+      <!-- 按钮区域：调整到代码下方并靠右对齐，符合正常逻辑 -->
+      <div class="window-controls">
+        <div class="control minimize" @click.stop="minimizeWindow" title="最小化">
+          <!-- 最小化 SVG 图标 -->
+          <svg width="12" height="12" viewBox="0 0 12 12">
+            <path d="M1,6 H11" stroke="currentColor" stroke-width="1.5" />
+          </svg>
+        </div>
+        <div class="control close" @click.stop="closeWindow" title="关闭">
+          <!-- 关闭 SVG 图标 -->
+          <svg width="12" height="12" viewBox="0 0 12 12">
+            <path d="M2,2 L10,10 M10,2 L2,10" stroke="currentColor" stroke-width="1.5" />
+          </svg>
+        </div>
+      </div>
     </div>
 
     <div class="app-body">
@@ -17,6 +28,7 @@
         <div class="nav-item" :class="{ active: currentTab === 'dashboard' }" @click="currentTab = 'dashboard'">
           概览
         </div>
+        <div class="nav-item" :class="{ active: currentTab === 'log' }" @click="currentTab = 'log'">运行日志</div>
         <div class="nav-item" :class="{ active: currentTab === 'config' }" @click="currentTab = 'config'">
           参数配置
         </div>
@@ -43,6 +55,15 @@
           <p v-if="!isReady" class="warning-text">请先在“软件设置”中配置正确的 frpc 路径并加载配置！</p>
           <div class="chart-container">
             <v-chart class="chart" :option="chartOption" autoresize />
+          </div>
+        </div>
+
+        <!-- 日志页面 -->
+        <div v-if="currentTab === 'log'" class="page">
+          <h2>运行日志</h2>
+          <div class="log-container" ref="logContainerRef">
+            <div v-if="logs.length === 0" class="hint">暂无日志输出...</div>
+            <div v-for="(line, index) in logs" :key="index" class="log-line">{{ line }}</div>
           </div>
         </div>
 
@@ -108,7 +129,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
+import { listen } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { open } from '@tauri-apps/plugin-dialog';
@@ -126,6 +148,9 @@ const appWindow = getCurrentWindow();
 const currentTab = ref('software'); // 默认先引导用户去设置
 const isRunning = ref(false);
 const configLoaded = ref(false);
+const logs = ref([]);
+const logContainerRef = ref(null);
+let unlistenLog = null;
 
 // 初始化时优先从 localStorage 读取
 const appSettings = ref({
@@ -184,7 +209,7 @@ const selectToml = async () => {
   }
 };
 
-// --- 真实解析 TOML (轻量级正则解析，因为只需要处理特定字段) ---
+// 真实解析 TOML (轻量级正则解析，因为只需要处理特定字段)
 const loadRealConfig = async (path) => {
   try {
     const content = await invoke('read_config', { path });
@@ -212,7 +237,7 @@ const loadRealConfig = async (path) => {
   }
 };
 
-// --- 生成要保存的 TOML 内容 ---
+// 生成要保存的 TOML 内容
 const generateToml = () => {
   return `serverAddr = "${frpConfig.value.serverAddr}"
 serverPort = ${frpConfig.value.serverPort}
@@ -226,24 +251,28 @@ localPort = ${frpConfig.value.localPort}
 remotePort = ${frpConfig.value.remotePort}`;
 };
 
-const saveConfig = async () => {
+const saveConfig = async (showAlert = true) => {
   try {
     const tomlContent = generateToml();
     await invoke('save_config', {
       path: appSettings.value.configPath,
       content: tomlContent
     });
-    alert("配置已成功覆盖原文件！");
+    // Vue 的 @click 默认会传 Event 对象进来，所以我们只判断如果明确传了 false 就不弹窗
+    if (showAlert !== false) {
+      alert("配置已成功覆盖原文件！");
+    }
   } catch (error) {
     alert('保存失败: ' + error);
   }
 };
 
-// --- 启动与关闭逻辑 ---
+// 启动与关闭逻辑
 const startFRP = async () => {
   if (!isReady.value) return;
   try {
-    await saveConfig(); // 启动前覆盖真实文件
+    logs.value = []; // 清空上一次的运行日志
+    await saveConfig(false);
     await invoke('start_frp', {
       execPath: appSettings.value.frpcPath,
       configPath: appSettings.value.configPath
@@ -263,7 +292,7 @@ const stopFRP = async () => {
   }
 };
 
-// --- Echarts 逻辑不变 ---
+// Echarts 逻辑
 const chartData = ref(Array.from({ length: 20 }, () => 0));
 const chartOption = ref({
   tooltip: { trigger: 'axis' },
@@ -282,25 +311,38 @@ const chartOption = ref({
 let timer;
 
 onMounted(async () => {
-  // Echarts 定时器逻辑 (保持原样)
+  // 原有的 Echarts 定时器逻辑
   timer = setInterval(() => {
     chartData.value.push(isRunning.value ? Math.floor(Math.random() * 50) + 10 : 0);
     chartData.value.shift();
     chartOption.value.series[0].data = [...chartData.value];
   }, 1000);
 
-  // 如果本地存有配置文件路径，启动软件时自动加载
+  // 新增：监听后端传来的 frpc-log 事件
+  unlistenLog = await listen('frpc-log', (event) => {
+    logs.value.push(event.payload);
+    // 使用 nextTick 确保 DOM 更新后自动滚动到底部
+    nextTick(() => {
+      if (logContainerRef.value) {
+        logContainerRef.value.scrollTop = logContainerRef.value.scrollHeight;
+      }
+    });
+  });
+
+  // 原有的自动加载配置逻辑
   if (appSettings.value.configPath) {
     try {
       await loadRealConfig(appSettings.value.configPath);
-      // 可选：如果想一打开软件就直接跳到概览页，可以解除下面这行的注释
-      // currentTab.value = 'dashboard'; 
     } catch (e) {
       console.warn("自动加载上次的配置文件失败", e);
     }
   }
 });
-onUnmounted(() => clearInterval(timer));
+
+onUnmounted(() => {
+  clearInterval(timer);
+  if (unlistenLog) unlistenLog();
+});
 
 // 窗口控制
 const minimizeWindow = () => appWindow.minimize();
@@ -338,38 +380,16 @@ html {
   height: 38px;
   display: flex;
   align-items: center;
-  padding: 0 16px;
   background-color: #e5e5ea;
   border-bottom: 1px solid #d1d1d6;
   user-select: none;
   position: relative;
+  /* 为右侧按钮绝对定位做准备 */
 }
 
 /* 确保拖拽区域铺满且层级正确 */
 .titlebar[data-tauri-drag-region] {
   cursor: grab;
-}
-
-.window-controls {
-  display: flex;
-  gap: 8px;
-  z-index: 20;
-  /* 确保按钮层级最高 */
-}
-
-.control {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  cursor: pointer;
-}
-
-.control.close {
-  background: #ff5f56;
-}
-
-.control.minimize {
-  background: #ffbd2e;
 }
 
 .title-text {
@@ -382,9 +402,39 @@ html {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-left: -32px;
-  /* 居中偏移修正 */
   cursor: grab;
+}
+
+/* Windows 风格右侧按钮组 */
+.window-controls {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  display: flex;
+  z-index: 20;
+}
+
+.control {
+  width: 46px;
+  /* 经典 Windows 按钮宽度 */
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #333;
+  transition: background-color 0.2s, color 0.1s;
+}
+
+.control:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.control.close:hover {
+  background-color: #e81123;
+  /* Windows 默认的关闭红 */
+  color: white;
 }
 
 /* 主体布局 */
@@ -574,5 +624,30 @@ h2 {
   font-size: 12px;
   color: #888;
   margin-top: 20px;
+}
+
+/* 新增：终端日志页面样式 */
+.log-container {
+  background: #1e1e1e;
+  color: #cfcfcf;
+  padding: 15px;
+  border-radius: 8px;
+  height: calc(100vh - 160px);
+  overflow-y: auto;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.log-line {
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+.log-container .hint {
+  color: #666;
+  text-align: center;
+  margin-top: 50px;
 }
 </style>

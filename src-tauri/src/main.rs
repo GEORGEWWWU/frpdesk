@@ -4,11 +4,11 @@
 )]
 
 use std::fs;
-use std::process::{Child, Command};
+use std::io::{BufRead, BufReader}; // 新增：用于读取缓冲日志
+use std::process::{Child, Command, Stdio}; // 新增：引入 Stdio 处理管道
 use std::sync::Mutex;
-use tauri::State;
+use tauri::{AppHandle, Emitter, State}; // 新增：引入 AppHandle 和 Emitter 用于发送事件
 
-// 用于全局存储 frpc 进程状态
 struct AppState {
     frpc_process: Mutex<Option<Child>>,
 }
@@ -16,6 +16,7 @@ struct AppState {
 #[tauri::command]
 fn start_frp(
     state: State<AppState>,
+    app_handle: AppHandle, // 新增注入 AppHandle
     exec_path: String,
     config_path: String,
 ) -> Result<String, String> {
@@ -24,9 +25,37 @@ fn start_frp(
         return Ok("服务已经在运行".to_string());
     }
 
-    // 对应批处理命令: frpc -c frpc.toml[cite: 4]
-    match Command::new(&exec_path).arg("-c").arg(&config_path).spawn() {
-        Ok(child) => {
+    // 配置管道以捕获输出
+    match Command::new(&exec_path)
+        .arg("-c")
+        .arg(&config_path)
+        .stdout(Stdio::piped()) // 捕获标准输出
+        .stderr(Stdio::piped()) // 捕获标准错误
+        .spawn()
+    {
+        Ok(mut child) => {
+            // 开辟新线程读取 stdout 并发送给前端
+            if let Some(stdout) = child.stdout.take() {
+                let app_clone = app_handle.clone();
+                std::thread::spawn(move || {
+                    let reader = BufReader::new(stdout);
+                    for line in reader.lines().flatten() {
+                        let _ = app_clone.emit("frpc-log", line); // 触发事件
+                    }
+                });
+            }
+
+            // 开辟新线程读取 stderr 并发送给前端
+            if let Some(stderr) = child.stderr.take() {
+                let app_clone = app_handle.clone();
+                std::thread::spawn(move || {
+                    let reader = BufReader::new(stderr);
+                    for line in reader.lines().flatten() {
+                        let _ = app_clone.emit("frpc-log", line); // 触发事件
+                    }
+                });
+            }
+
             *process_guard = Some(child);
             Ok("FRP 已启动".to_string())
         }
