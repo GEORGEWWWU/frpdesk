@@ -1,14 +1,13 @@
 <template>
-  <!-- 最外层毛玻璃容器 -->
-  <div class="macos-window">
-
-    <!-- 顶部拖拽栏 (Tauri 专属 data-tauri-drag-region 属性) -->
-    <div class="titlebar" data-tauri-drag-region>
+  <div class="app-container">
+    <!-- 顶部标题栏：去掉了父容器的 data-tauri-drag-region -->
+    <div class="titlebar">
+      <!-- 按钮区域保持独立，不受拖拽覆盖 -->
       <div class="window-controls">
-        <div class="control close" @click="closeWindow"></div>
-        <div class="control minimize" @click="minimizeWindow"></div>
-        <div class="control maximize"></div>
+        <div class="control close" @click.stop="closeWindow" title="关闭"></div>
+        <div class="control minimize" @click.stop="minimizeWindow" title="最小化"></div>
       </div>
+      <!-- 仅在中间空白/文本区域开启拖拽 -->
       <div class="title-text" data-tauri-drag-region>FRP Manager</div>
     </div>
 
@@ -16,37 +15,19 @@
       <!-- 左侧边栏 -->
       <div class="sidebar">
         <div class="nav-item" :class="{ active: currentTab === 'dashboard' }" @click="currentTab = 'dashboard'">
-          <!-- Dashboard SVG -->
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="3" width="7" height="9" rx="1" />
-            <rect x="14" y="3" width="7" height="5" rx="1" />
-            <rect x="14" y="12" width="7" height="9" rx="1" />
-            <rect x="3" y="16" width="7" height="5" rx="1" />
-          </svg>
           概览
         </div>
         <div class="nav-item" :class="{ active: currentTab === 'config' }" @click="currentTab = 'config'">
-          <!-- Settings SVG -->
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="3" />
-            <path
-              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-          </svg>
           参数配置
         </div>
         <div class="nav-item" :class="{ active: currentTab === 'software' }" @click="currentTab = 'software'">
-          <!-- Tool SVG -->
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
-            <path
-              d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-          </svg>
           软件设置
         </div>
       </div>
 
       <!-- 右侧主内容区 -->
       <div class="main-content">
-        <!-- 页面: 概览 -->
+        <!-- 概览页面 -->
         <div v-if="currentTab === 'dashboard'" class="page">
           <h2>控制台概览</h2>
           <div class="status-card">
@@ -55,60 +36,72 @@
               <span>{{ isRunning ? '服务运行中' : '服务已停止' }}</span>
             </div>
             <div class="actions">
-              <button class="btn primary" v-if="!isRunning" @click="startFRP">启动 FRP</button>
+              <button class="btn primary" v-if="!isRunning" :disabled="!isReady" @click="startFRP">启动 FRP</button>
               <button class="btn danger" v-else @click="stopFRP">关闭 FRP</button>
             </div>
           </div>
-
+          <p v-if="!isReady" class="warning-text">请先在“软件设置”中配置正确的 frpc 路径并加载配置！</p>
           <div class="chart-container">
             <v-chart class="chart" :option="chartOption" autoresize />
           </div>
         </div>
 
-        <!-- 页面: FRP 配置 -->
+        <!-- 配置页面 -->
         <div v-if="currentTab === 'config'" class="page">
           <h2>FRP 参数设置</h2>
-          <div class="form-group">
-            <label>服务器地址 (serverAddr)</label>
-            <input type="text" v-model="frpConfig.serverAddr" placeholder="如: 8.137.173.82" />
-          </div>
-          <div class="form-group">
-            <label>服务器端口 (serverPort)</label>
-            <input type="number" v-model="frpConfig.serverPort" placeholder="默认: 7000" />
-          </div>
-          <div class="form-group">
-            <label>验证密钥 (auth.token)</label>
-            <input type="text" v-model="frpConfig.token" placeholder="123456a" />
-          </div>
+          <div v-if="configLoaded">
+            <div class="form-group">
+              <label>服务器地址 (serverAddr)</label>
+              <input type="text" v-model="frpConfig.serverAddr" />
+            </div>
+            <div class="form-group">
+              <label>服务器端口 (serverPort)</label>
+              <input type="number" v-model="frpConfig.serverPort" />
+            </div>
+            <div class="form-group">
+              <label>验证密钥 (auth.token)</label>
+              <input type="text" v-model="frpConfig.token" />
+            </div>
 
-          <div class="divider">代理设置 (TCP)</div>
-          <div class="form-group">
-            <label>本地 IP (localIP)</label>
-            <input type="text" v-model="frpConfig.localIP" placeholder="127.0.0.1" />
+            <div class="divider">代理设置 (TCP)</div>
+            <div class="form-group">
+              <label>本地 IP (localIP)</label>
+              <input type="text" v-model="frpConfig.localIP" />
+            </div>
+            <div class="form-group">
+              <label>本地端口 (localPort)</label>
+              <input type="number" v-model="frpConfig.localPort" />
+            </div>
+            <div class="form-group">
+              <label>远程端口 (remotePort)</label>
+              <input type="number" v-model="frpConfig.remotePort" />
+            </div>
+            <button class="btn primary" @click="saveConfig">保存并覆盖原始配置文件</button>
           </div>
-          <div class="form-group">
-            <label>本地端口 (localPort)</label>
-            <input type="number" v-model="frpConfig.localPort" placeholder="25565" />
+          <div v-else>
+            <p class="warning-text">尚未加载配置文件，请前往“软件设置”选择您的 frpc.toml。</p>
           </div>
-          <div class="form-group">
-            <label>远程端口 (remotePort)</label>
-            <input type="number" v-model="frpConfig.remotePort" placeholder="25565" />
-          </div>
-          <button class="btn primary" @click="saveConfig">保存配置 (frpc.toml)</button>
         </div>
 
-        <!-- 页面: 软件设置 -->
+        <!-- 软件设置页面 -->
         <div v-if="currentTab === 'software'" class="page">
           <h2>软件设置</h2>
-          <div class="form-group">
-            <label>frpc 可执行文件路径</label>
-            <input type="text" v-model="appSettings.frpcPath" placeholder="./frpc.exe" />
+          <div class="form-group flex-row">
+            <div class="input-container">
+              <label>frpc 可执行文件路径 (frpc.exe)</label>
+              <input type="text" v-model="appSettings.frpcPath" readonly placeholder="点击右侧按钮选择..." />
+            </div>
+            <button class="btn secondary align-bottom" @click="selectExe">浏览</button>
           </div>
-          <div class="form-group">
-            <label>配置文件路径</label>
-            <input type="text" v-model="appSettings.configPath" placeholder="./frpc.toml" />
+
+          <div class="form-group flex-row">
+            <div class="input-container">
+              <label>配置文件路径 (frpc.toml)</label>
+              <input type="text" v-model="appSettings.configPath" readonly placeholder="点击右侧按钮选择..." />
+            </div>
+            <button class="btn secondary align-bottom" @click="selectToml">浏览并加载</button>
           </div>
-          <p class="hint">默认假定 frpc.exe 和 frpc.toml 与本程序在同一目录下。</p>
+          <p class="hint">当前所有设置仅在内存中暂存，重启软件后需重新指定路径（可后续引入 tauri-plugin-store 持久化）。</p>
         </div>
       </div>
     </div>
@@ -116,103 +109,104 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
-import { invoke } from '@tauri-apps/api/tauri';
-import { appWindow } from '@tauri-apps/api/window';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { invoke } from '@tauri-apps/api/core';
+import { getCurrentWindow } from '@tauri-apps/api/window';
+import { open } from '@tauri-apps/plugin-dialog';
 import { use } from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
 import { LineChart } from 'echarts/charts';
 import { GridComponent, TooltipComponent } from 'echarts/components';
 import VChart from 'vue-echarts';
 
-// 注册 Echarts 组件
 use([CanvasRenderer, LineChart, GridComponent, TooltipComponent]);
 
-// 状态管理
-const currentTab = ref('dashboard');
-const isRunning = ref(false);
-const chartData = ref(Array.from({ length: 20 }, () => 0));
+const appWindow = getCurrentWindow();
 
-// 对应来源 的配置数据结构
-const frpConfig = ref({
-  serverAddr: '8.137.173.82',
-  serverPort: 7000,
-  token: '123456a',
-  localIP: '127.0.0.1',
-  localPort: 25565,
-  remotePort: 25565
-});
+// 状态管理
+const currentTab = ref('software'); // 默认先引导用户去设置
+const isRunning = ref(false);
+const configLoaded = ref(false);
 
 const appSettings = ref({
-  frpcPath: 'frpc.exe',
-  configPath: 'frpc.toml'
+  frpcPath: '',
+  configPath: ''
 });
 
-// Echarts 配置
-const chartOption = ref({
-  tooltip: { trigger: 'axis' },
-  grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-  xAxis: { type: 'category', boundaryGap: false, show: false, data: Array.from({ length: 20 }, (_, i) => i) },
-  yAxis: { type: 'value', splitLine: { lineStyle: { color: 'rgba(0,0,0,0.05)' } } },
-  series: [{
-    name: '网络流量 (模拟)',
-    type: 'line',
-    smooth: true,
-    symbol: 'none',
-    lineStyle: { width: 3, color: '#3b82f6' },
-    areaStyle: {
-      color: {
-        type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-        colorStops: [{ offset: 0, color: 'rgba(59, 130, 246, 0.4)' }, { offset: 1, color: 'rgba(59, 130, 246, 0)' }]
-      }
-    },
-    data: chartData.value
-  }]
+// 计算属性：判断是否准备好启动
+const isReady = computed(() => {
+  return appSettings.value.frpcPath !== '' && appSettings.value.configPath !== '' && configLoaded.value;
 });
 
-// 模拟流量动画
-let timer;
-onMounted(() => {
-  timer = setInterval(() => {
-    if (isRunning.value) {
-      chartData.value.push(Math.floor(Math.random() * 50) + 10);
-    } else {
-      chartData.value.push(0);
-    }
-    chartData.value.shift();
-    chartOption.value.series[0].data = [...chartData.value];
-  }, 1000);
+// 真实的配置数据（初始为空）
+const frpConfig = ref({
+  serverAddr: '',
+  serverPort: null,
+  token: '',
+  localIP: '',
+  localPort: null,
+  remotePort: null
 });
-onUnmounted(() => clearInterval(timer));
 
-// 窗口控制
-const minimizeWindow = () => appWindow.minimize();
-const closeWindow = () => appWindow.close();
-
-// 核心逻辑: 启动与关闭
-const startFRP = async () => {
+// 增加 catch 处理，防止失败无提示
+const selectExe = async () => {
   try {
-    await saveConfig(); // 启动前先保存最新配置
-    await invoke('start_frp', {
-      execPath: appSettings.value.frpcPath,
-      configPath: appSettings.value.configPath
+    const selected = await open({
+      multiple: false,
+      filters: [{ name: 'Executable', extensions: ['exe'] }]
     });
-    isRunning.value = true;
-  } catch (error) {
-    alert(error);
+    if (selected) {
+      appSettings.value.frpcPath = selected;
+    }
+  } catch (err) {
+    alert("打开对话框失败，请检查权限配置: " + err);
   }
 };
 
-const stopFRP = async () => {
+const selectToml = async () => {
   try {
-    await invoke('stop_frp');
-    isRunning.value = false;
-  } catch (error) {
-    alert(error);
+    const selected = await open({
+      multiple: false,
+      filters: [{ name: 'TOML Config', extensions: ['toml'] }]
+    });
+    if (selected) {
+      appSettings.value.configPath = selected;
+      await loadRealConfig(selected);
+    }
+  } catch (err) {
+    alert("打开对话框失败，请检查权限配置: " + err);
   }
 };
 
-// 生成 TOML 格式字符串[cite: 1]
+// --- 真实解析 TOML (轻量级正则解析，因为只需要处理特定字段) ---
+const loadRealConfig = async (path) => {
+  try {
+    const content = await invoke('read_config', { path });
+    // 简单的正则匹配提取值
+    const extractString = (key, text) => {
+      const match = text.match(new RegExp(`${key}\\s*=\\s*"([^"]+)"`));
+      return match ? match[1] : '';
+    };
+    const extractNumber = (key, text) => {
+      const match = text.match(new RegExp(`${key}\\s*=\\s*(\\d+)`));
+      return match ? parseInt(match[1], 10) : null;
+    };
+
+    frpConfig.value.serverAddr = extractString('serverAddr', content);
+    frpConfig.value.serverPort = extractNumber('serverPort', content);
+    frpConfig.value.token = extractString('auth.token', content);
+    frpConfig.value.localIP = extractString('localIP', content);
+    frpConfig.value.localPort = extractNumber('localPort', content);
+    frpConfig.value.remotePort = extractNumber('remotePort', content);
+
+    configLoaded.value = true;
+    currentTab.value = 'dashboard'; // 加载成功跳转概览
+  } catch (err) {
+    alert("读取配置文件失败: " + err);
+  }
+};
+
+// --- 生成要保存的 TOML 内容 ---
 const generateToml = () => {
   return `serverAddr = "${frpConfig.value.serverAddr}"
 serverPort = ${frpConfig.value.serverPort}
@@ -233,51 +227,115 @@ const saveConfig = async () => {
       path: appSettings.value.configPath,
       content: tomlContent
     });
+    alert("配置已成功覆盖原文件！");
   } catch (error) {
-    alert('保存配置失败: ' + error);
+    alert('保存失败: ' + error);
   }
 };
+
+// --- 启动与关闭逻辑 ---
+const startFRP = async () => {
+  if (!isReady.value) return;
+  try {
+    await saveConfig(); // 启动前覆盖真实文件
+    await invoke('start_frp', {
+      execPath: appSettings.value.frpcPath,
+      configPath: appSettings.value.configPath
+    });
+    isRunning.value = true;
+  } catch (error) {
+    alert(error);
+  }
+};
+
+const stopFRP = async () => {
+  try {
+    await invoke('stop_frp');
+    isRunning.value = false;
+  } catch (error) {
+    alert(error);
+  }
+};
+
+// --- Echarts 逻辑不变 ---
+const chartData = ref(Array.from({ length: 20 }, () => 0));
+const chartOption = ref({
+  tooltip: { trigger: 'axis' },
+  grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+  xAxis: { type: 'category', boundaryGap: false, show: false, data: Array.from({ length: 20 }, (_, i) => i) },
+  yAxis: { type: 'value', splitLine: { lineStyle: { color: 'rgba(0,0,0,0.05)' } } },
+  series: [{
+    name: '模拟流量', type: 'line', smooth: true, symbol: 'none',
+    lineStyle: { width: 3, color: '#3b82f6' },
+    areaStyle: {
+      color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(59,130,246,0.4)' }, { offset: 1, color: 'rgba(59,130,246,0)' }] }
+    },
+    data: chartData.value
+  }]
+});
+let timer;
+onMounted(() => {
+  timer = setInterval(() => {
+    chartData.value.push(isRunning.value ? Math.floor(Math.random() * 50) + 10 : 0);
+    chartData.value.shift();
+    chartOption.value.series[0].data = [...chartData.value];
+  }, 1000);
+});
+onUnmounted(() => clearInterval(timer));
+
+// 窗口控制
+const minimizeWindow = () => appWindow.minimize();
+const closeWindow = () => appWindow.close();
 </script>
 
-<style scoped>
+<style>
+/* 全局样式，修复滚动条 */
 body,
 html {
   margin: 0;
   padding: 0;
-  background-color: transparent !important;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-}
-
-/* 核心: MacOS 毛玻璃质感 */
-.macos-window {
-  width: 100vw;
-  height: 100vh;
-  background: rgba(245, 245, 247, 0.6);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-radius: 12px;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
+  /* 禁止全局出现滚动条 */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: #f5f5f7;
+  /* 不透明的苹果灰底色 */
+}
+</style>
+
+<style scoped>
+/* 容器修复了超出的问题 */
+.app-container {
+  width: 100%;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  /* 柔和的边框，代替突兀的高对比阴影 */
-  border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
-/* 自定义标题栏 */
+/* 顶部拖拽栏 */
 .titlebar {
   height: 38px;
   display: flex;
   align-items: center;
   padding: 0 16px;
-  background: rgba(255, 255, 255, 0.3);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  background-color: #e5e5ea;
+  border-bottom: 1px solid #d1d1d6;
+  user-select: none;
+  position: relative;
+}
+
+/* 确保拖拽区域铺满且层级正确 */
+.titlebar[data-tauri-drag-region] {
+  cursor: grab;
 }
 
 .window-controls {
   display: flex;
   gap: 8px;
-  z-index: 10;
+  z-index: 20;
+  /* 确保按钮层级最高 */
 }
 
 .control {
@@ -295,63 +353,64 @@ html {
   background: #ffbd2e;
 }
 
-.control.maximize {
-  background: #27c93f;
-}
-
 .title-text {
   flex: 1;
   text-align: center;
   font-size: 13px;
   font-weight: 500;
   color: #333;
-  margin-left: -50px;
-  /* 修正居中偏移 */
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: -32px;
+  /* 居中偏移修正 */
+  cursor: grab;
 }
 
-/* 布局 */
+/* 主体布局 */
 .app-body {
   display: flex;
   flex: 1;
   height: calc(100vh - 38px);
+  overflow: hidden;
+  /* 防止溢出 */
 }
 
-/* 左侧边栏 */
 .sidebar {
-  width: 200px;
-  background: rgba(255, 255, 255, 0.4);
-  border-right: 1px solid rgba(0, 0, 0, 0.05);
+  width: 180px;
+  background-color: #f0f0f3;
+  border-right: 1px solid #d1d1d6;
   padding: 20px 10px;
+  box-sizing: border-box;
 }
 
 .nav-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
   padding: 10px 14px;
   margin-bottom: 8px;
-  border-radius: 8px;
-  color: #555;
+  border-radius: 6px;
+  color: #444;
   font-size: 14px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: 0.2s;
 }
 
 .nav-item:hover {
-  background: rgba(0, 0, 0, 0.04);
+  background-color: #e5e5ea;
 }
 
 .nav-item.active {
-  background: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
-  font-weight: 500;
+  background-color: #007aff;
+  color: white;
 }
 
-/* 主内容区 */
 .main-content {
   flex: 1;
-  padding: 30px;
+  padding: 20px 30px;
   overflow-y: auto;
+  /* 仅主内容区允许纵向滚动 */
+  box-sizing: border-box;
+  background-color: #ffffff;
 }
 
 h2 {
@@ -361,35 +420,28 @@ h2 {
   margin-bottom: 20px;
 }
 
-/* 卡片与表单 */
+/* 卡片 */
 .status-card {
-  background: rgba(255, 255, 255, 0.6);
-  border-radius: 12px;
-  padding: 20px;
+  background: #f9f9fb;
+  border: 1px solid #e5e5ea;
+  border-radius: 10px;
+  padding: 16px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
   margin-bottom: 20px;
-}
-
-.status-indicator {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 500;
-  color: #333;
 }
 
 .dot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
+  margin-right: 8px;
+  display: inline-block;
 }
 
 .dot.running {
   background: #34c759;
-  box-shadow: 0 0 8px rgba(52, 199, 89, 0.6);
 }
 
 .dot.stopped {
@@ -400,7 +452,7 @@ h2 {
   border: none;
   padding: 8px 16px;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
   transition: 0.2s;
   font-weight: 500;
@@ -411,23 +463,30 @@ h2 {
   color: white;
 }
 
-.btn.primary:hover {
-  background: #006ee6;
+.btn.primary:disabled {
+  background: #a1c6ea;
+  cursor: not-allowed;
+}
+
+.btn.secondary {
+  background: #e5e5ea;
+  color: #333;
+}
+
+.btn.secondary:hover {
+  background: #d1d1d6;
 }
 
 .btn.danger {
-  background: rgba(255, 59, 48, 0.1);
-  color: #ff3b30;
-}
-
-.btn.danger:hover {
-  background: rgba(255, 59, 48, 0.2);
+  background: #ff3b30;
+  color: white;
 }
 
 .chart-container {
-  height: 250px;
-  background: rgba(255, 255, 255, 0.6);
-  border-radius: 12px;
+  height: 220px;
+  background: #f9f9fb;
+  border: 1px solid #e5e5ea;
+  border-radius: 10px;
   padding: 10px;
 }
 
@@ -440,6 +499,16 @@ h2 {
   margin-bottom: 16px;
 }
 
+.flex-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.input-container {
+  flex: 1;
+}
+
 .form-group label {
   display: block;
   font-size: 13px;
@@ -449,32 +518,42 @@ h2 {
 
 .form-group input {
   width: 100%;
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  background: rgba(255, 255, 255, 0.7);
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #c7c7cc;
+  background: #fff;
   box-sizing: border-box;
   font-size: 14px;
   outline: none;
-  transition: 0.2s;
 }
 
 .form-group input:focus {
   border-color: #007aff;
-  background: white;
+}
+
+.form-group input[readonly] {
+  background: #f0f0f3;
+  color: #888;
 }
 
 .divider {
   margin: 20px 0 10px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: bold;
   color: #333;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid #e5e5ea;
   padding-bottom: 5px;
+}
+
+.warning-text {
+  color: #ff9500;
+  font-size: 13px;
+  margin-bottom: 10px;
 }
 
 .hint {
   font-size: 12px;
   color: #888;
+  margin-top: 20px;
 }
 </style>

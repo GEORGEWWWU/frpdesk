@@ -1,0 +1,10 @@
+serverAddr = "8.137.173.82"
+serverPort = 7000
+auth.token = "123456a"
+
+[[proxies]]
+name = "test-tcp"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 25565
+remotePort = 25565

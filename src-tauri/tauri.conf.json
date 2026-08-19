@@ -13,12 +13,13 @@
     "windows": [
       {
         "fullscreen": false,
-        "resizable": true,
+        "resizable": false,
         "title": "FRP Manager",
         "width": 800,
         "height": 550,
         "decorations": false,
-        "transparent": true
+        "transparent": false,
+        "center": true
       }
     ],
     "security": {

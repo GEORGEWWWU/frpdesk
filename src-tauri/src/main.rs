@@ -58,6 +58,7 @@ fn save_config(path: String, content: String) -> Result<(), String> {
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .manage(AppState {
             frpc_process: Mutex::new(None),
         })
