@@ -70,34 +70,37 @@
         <!-- 配置页面 -->
         <div v-if="currentTab === 'config'" class="page">
           <h2>FRP 参数设置</h2>
-          <div v-if="configLoaded">
+          <p v-if="isRunning" class="warning-text">服务运行中，禁止修改配置参数。</p>
+          <div v-if="configLoaded" :class="{ 'disabled-overlay': isRunning }">
             <div class="form-group">
               <label>服务器地址 (serverAddr)</label>
-              <input type="text" v-model="frpConfig.serverAddr" />
+              <input type="text" v-model="frpConfig.serverAddr" :disabled="isRunning" />
             </div>
             <div class="form-group">
               <label>服务器端口 (serverPort)</label>
-              <input type="number" v-model="frpConfig.serverPort" />
+              <input type="number" v-model="frpConfig.serverPort" :disabled="isRunning" />
             </div>
             <div class="form-group">
               <label>验证密钥 (auth.token)</label>
-              <input type="text" v-model="frpConfig.token" />
+              <input type="text" v-model="frpConfig.token" :disabled="isRunning" />
             </div>
 
             <div class="divider">代理设置 (TCP)</div>
             <div class="form-group">
               <label>本地 IP (localIP)</label>
-              <input type="text" v-model="frpConfig.localIP" />
+              <input type="text" v-model="frpConfig.localIP" :disabled="isRunning" />
             </div>
             <div class="form-group">
               <label>本地端口 (localPort)</label>
-              <input type="number" v-model="frpConfig.localPort" />
+              <input type="number" v-model="frpConfig.localPort" :disabled="isRunning" />
             </div>
             <div class="form-group">
               <label>远程端口 (remotePort)</label>
-              <input type="number" v-model="frpConfig.remotePort" />
+              <input type="number" v-model="frpConfig.remotePort" :disabled="isRunning" />
             </div>
-            <button class="btn primary" @click="saveConfig">保存并覆盖原始配置文件</button>
+            <button class="btn primary" @click="saveConfig" :disabled="isRunning">
+              保存并覆盖原始配置文件
+            </button>
           </div>
           <div v-else>
             <p class="warning-text">尚未加载配置文件，请前往“软件设置”选择您的 frpc.toml。</p>
@@ -107,20 +110,23 @@
         <!-- 软件设置页面 -->
         <div v-if="currentTab === 'software'" class="page">
           <h2>软件设置</h2>
+          <p v-if="isRunning" class="warning-text">服务运行中，禁止修改路径设置。</p>
           <div class="form-group flex-row">
             <div class="input-container">
               <label>frpc 可执行文件路径 (frpc.exe)</label>
-              <input type="text" v-model="appSettings.frpcPath" readonly placeholder="点击右侧按钮选择..." />
+              <input type="text" v-model="appSettings.frpcPath" readonly placeholder="点击右侧按钮选择..."
+                :disabled="isRunning" />
             </div>
-            <button class="btn secondary align-bottom" @click="selectExe">浏览</button>
+            <button class="btn secondary align-bottom" @click="selectExe" :disabled="isRunning">浏览</button>
           </div>
 
           <div class="form-group flex-row">
             <div class="input-container">
               <label>配置文件路径 (frpc.toml)</label>
-              <input type="text" v-model="appSettings.configPath" readonly placeholder="点击右侧按钮选择..." />
+              <input type="text" v-model="appSettings.configPath" readonly placeholder="点击右侧按钮选择..."
+                :disabled="isRunning" />
             </div>
-            <button class="btn secondary align-bottom" @click="selectToml">浏览并加载</button>
+            <button class="btn secondary align-bottom" @click="selectToml" :disabled="isRunning">浏览并加载</button>
           </div>
         </div>
       </div>
@@ -665,5 +671,26 @@ h2 {
   color: #666;
   text-align: center;
   margin-top: 50px;
+}
+
+/* 新增：表单元素禁用状态样式 */
+.form-group input:disabled {
+  background-color: #f0f0f3;
+  color: #a0a0a5;
+  border-color: #e5e5ea;
+  cursor: not-allowed;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed !important;
+  pointer-events: none;
+}
+
+/* 如果需要整块变灰，可以使用这个类 */
+.disabled-overlay {
+  opacity: 0.7;
+  pointer-events: none;
+  /* 彻底阻止所有子元素的鼠标事件 */
 }
 </style>
