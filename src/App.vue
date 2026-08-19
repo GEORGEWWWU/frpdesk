@@ -1,6 +1,6 @@
 <template>
   <div class="app-container">
-    <!-- 顶部标题栏：去掉了父容器的 data-tauri-drag-region -->
+    <!-- 顶部标题栏 -->
     <div class="titlebar">
       <!-- 仅在中间空白/文本区域开启拖拽 -->
       <div class="title-text" data-tauri-drag-region>FRP Desk</div>
@@ -26,35 +26,116 @@
       <!-- 左侧边栏 -->
       <div class="sidebar">
         <div class="nav-item" :class="{ active: currentTab === 'dashboard' }" @click="currentTab = 'dashboard'">
-          概览
+          <!-- 概览：宫格图标 -->
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+            <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+            <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+            <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+          </svg>
+          <span>概览</span>
         </div>
-        <div class="nav-item" :class="{ active: currentTab === 'log' }" @click="currentTab = 'log'">运行日志</div>
+
+        <div class="nav-item" :class="{ active: currentTab === 'log' }" @click="currentTab = 'log'">
+          <!-- 运行日志：终端命令行图标 -->
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="4 17 10 11 4 5"></polyline>
+            <line x1="12" y1="19" x2="20" y2="19"></line>
+          </svg>
+          <span>运行日志</span>
+        </div>
+
         <div class="nav-item" :class="{ active: currentTab === 'config' }" @click="currentTab = 'config'">
-          参数配置
+          <!-- 参数配置：调节滑块图标 -->
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="21" x2="4" y2="14"></line>
+            <line x1="4" y1="10" x2="4" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12" y2="3"></line>
+            <line x1="20" y1="21" x2="20" y2="16"></line>
+            <line x1="20" y1="12" x2="20" y2="3"></line>
+            <line x1="1" y1="14" x2="7" y2="14"></line>
+            <line x1="9" y1="8" x2="15" y2="8"></line>
+            <line x1="17" y1="16" x2="23" y2="16"></line>
+          </svg>
+          <span>参数配置</span>
         </div>
+
         <div class="nav-item" :class="{ active: currentTab === 'software' }" @click="currentTab = 'software'">
-          软件设置
+          <!-- 软件设置：齿轮图标 -->
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+            </path>
+          </svg>
+          <span>软件设置</span>
         </div>
       </div>
 
       <!-- 右侧主内容区 -->
       <div class="main-content">
-        <!-- 概览页面 -->
-        <div v-if="currentTab === 'dashboard'" class="page">
-          <h2>控制台概览</h2>
-          <div class="status-card">
-            <div class="status-indicator">
-              <div :class="['dot', isRunning ? 'running' : 'stopped']"></div>
-              <span>{{ isRunning ? '服务运行中' : '服务已停止' }}</span>
-            </div>
-            <div class="actions">
-              <button class="btn primary" v-if="!isRunning" :disabled="!isReady" @click="startFRP">启动 FRP</button>
-              <button class="btn danger" v-else @click="stopFRP">关闭 FRP</button>
-            </div>
+        <!-- 概览页面 (现代 Bento 布局) -->
+        <div v-if="currentTab === 'dashboard'" class="page dashboard-page">
+          <div class="page-title">
+            <h2>系统概览</h2>
           </div>
-          <p v-if="!isReady" class="warning-text">请先在“软件设置”中配置正确的 frpc 路径并加载配置！</p>
-          <div class="chart-container">
-            <v-chart class="chart" :option="chartOption" autoresize />
+
+          <div class="bento-grid">
+            <!-- 运行时长 -->
+            <div class="bento-card uptime-card">
+              <div class="card-label">连续运行时长</div>
+              <div class="uptime-value">{{ uptimeStr }}</div>
+            </div>
+
+            <!-- 核心引擎 -->
+            <div class="bento-card control-card">
+              <div class="card-header">
+                <span class="card-title-main">FRP 核心引擎</span>
+                <div :class="['status-badge', isRunning ? 'running' : 'stopped']">
+                  <span class="dot"></span>
+                  {{ isRunning ? '服务稳定运行中' : '服务当前已停止' }}
+                </div>
+              </div>
+              <div class="card-body">
+                <p v-if="!isReady" class="warning-text">⚠️ 请先在“软件设置”中配置路径并加载参数</p>
+                <p v-else class="subtitle">底层网络代理服务已就绪，请控制转发引擎状态。</p>
+                <div class="action-area">
+                  <button class="btn modern-btn primary" v-if="!isRunning" :disabled="!isReady" @click="startFRP">
+                    启动 FRP 代理
+                  </button>
+                  <button class="btn modern-btn danger" v-else @click="stopFRP">
+                    强制停止服务
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 本地代理 -->
+            <div class="bento-card info-card">
+              <div class="card-label">本地代理 (Local)</div>
+              <div class="info-value">{{ configLoaded ? `${frpConfig.localIP}:${frpConfig.localPort}` : '-- : --' }}
+              </div>
+            </div>
+
+            <!-- 服务器转发 -->
+            <div class="bento-card info-card">
+              <div class="card-label">外网访问 (Remote)</div>
+              <div class="info-value remote-text">{{ configLoaded ? `${frpConfig.serverAddr}:${frpConfig.remotePort}` :
+                '-- : --' }}</div>
+            </div>
+
+            <!-- 配置文件状态 -->
+            <div class="bento-card info-card">
+              <div class="card-label">配置文件状态</div>
+              <div :class="['config-status', configLoaded ? 'ready' : 'unready']">
+                {{ configLoaded ? '已加载就绪' : '未加载' }}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -140,13 +221,6 @@ import { listen } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { open } from '@tauri-apps/plugin-dialog';
-import { use } from 'echarts/core';
-import { CanvasRenderer } from 'echarts/renderers';
-import { LineChart } from 'echarts/charts';
-import { GridComponent, TooltipComponent } from 'echarts/components';
-import VChart from 'vue-echarts';
-
-use([CanvasRenderer, LineChart, GridComponent, TooltipComponent]);
 
 const appWindow = getCurrentWindow();
 
@@ -157,6 +231,7 @@ const configLoaded = ref(false);
 const logs = ref([]);
 const logContainerRef = ref(null);
 let unlistenLog = null;
+const uptimeStr = ref('00:00:00');
 
 // 统一处理日志追加与滚动
 const addLog = (message) => {
@@ -314,33 +389,24 @@ const stopFRP = async () => {
   }
 };
 
-// Echarts 逻辑
-const chartData = ref(Array.from({ length: 20 }, () => 0));
-const chartOption = ref({
-  tooltip: { trigger: 'axis' },
-  grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-  xAxis: { type: 'category', boundaryGap: false, show: false, data: Array.from({ length: 20 }, (_, i) => i) },
-  yAxis: { type: 'value', splitLine: { lineStyle: { color: 'rgba(0,0,0,0.05)' } } },
-  series: [{
-    name: '模拟流量', type: 'line', smooth: true, symbol: 'none',
-    lineStyle: { width: 3, color: '#3b82f6' },
-    areaStyle: {
-      color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(59,130,246,0.4)' }, { offset: 1, color: 'rgba(59,130,246,0)' }] }
-    },
-    data: chartData.value
-  }]
-});
 let timer;
 
 onMounted(async () => {
-  // 原有的 Echarts 定时器逻辑
-  timer = setInterval(() => {
-    chartData.value.push(isRunning.value ? Math.floor(Math.random() * 50) + 10 : 0);
-    chartData.value.shift();
-    chartOption.value.series[0].data = [...chartData.value];
+  // 只请求运行时长数据
+  timer = setInterval(async () => {
+    if (isRunning.value) {
+      try {
+        const stats = await invoke('get_frp_stats');
+        uptimeStr.value = stats.uptime;
+      } catch (e) {
+        console.error("获取后端状态失败", e);
+      }
+    } else {
+      uptimeStr.value = '00:00:00';
+    }
   }, 1000);
 
-  // 新增：监听后端传来的 frpc-log 事件
+  // 监听后端传来的 frpc-log 事件
   unlistenLog = await listen('frpc-log', (event) => {
     logs.value.push(event.payload);
     // 使用 nextTick 确保 DOM 更新后自动滚动到底部
@@ -380,10 +446,22 @@ html {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  /* 禁止全局出现滚动条 */
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background-color: #f5f5f7;
-  /* 不透明的苹果灰底色 */
+}
+
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6.span,
+b,
+em {
+  user-select: none !important;
+  -webkit-user-drag: none !important;
+  color: #2b2b2b !important;
 }
 </style>
 
@@ -402,11 +480,9 @@ html {
   height: 38px;
   display: flex;
   align-items: center;
-  background-color: #e5e5ea;
-  border-bottom: 1px solid #d1d1d6;
+  background-color: #fff;
   user-select: none;
   position: relative;
-  /* 为右侧按钮绝对定位做准备 */
 }
 
 /* 确保拖拽区域铺满且层级正确 */
@@ -469,21 +545,31 @@ html {
 }
 
 .sidebar {
-  width: 180px;
-  background-color: #f0f0f3;
-  border-right: 1px solid #d1d1d6;
+  width: 130px;
+  background-color: #fff;
   padding: 20px 10px;
   box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .nav-item {
-  padding: 10px 14px;
+  display: flex;
+  /* 开启 Flex 布局 */
+  align-items: center;
+  /* 让图标和文字垂直居中对齐 */
+  gap: 10px;
+  /* 设置图标和文字之间的间距 */
+  padding: 10px 12px;
+  /* 稍微调整了一下内边距适配窄边栏 */
   margin-bottom: 8px;
   border-radius: 6px;
   color: #444;
-  font-size: 14px;
+  font-size: 13px;
+  /* 字体稍微缩小一点，让侧边栏看起来更精致 */
   cursor: pointer;
   transition: 0.2s;
+  user-select: none;
+  /* 防止双击时选中文字 */
 }
 
 .nav-item:hover {
@@ -491,7 +577,7 @@ html {
 }
 
 .nav-item.active {
-  background-color: #007aff;
+  background-color: #2b2b2b;
   color: white;
 }
 
@@ -550,12 +636,12 @@ h2 {
 }
 
 .btn.primary {
-  background: #007aff;
+  background: #2b2b2b;
   color: white;
 }
 
 .btn.primary:disabled {
-  background: #a1c6ea;
+  background: #e9ecee;
   cursor: not-allowed;
 }
 
@@ -571,19 +657,6 @@ h2 {
 .btn.danger {
   background: #ff3b30;
   color: white;
-}
-
-.chart-container {
-  height: 220px;
-  background: #f9f9fb;
-  border: 1px solid #e5e5ea;
-  border-radius: 10px;
-  padding: 10px;
-}
-
-.chart {
-  width: 100%;
-  height: 100%;
 }
 
 .form-group {
@@ -619,7 +692,7 @@ h2 {
 }
 
 .form-group input:focus {
-  border-color: #007aff;
+  border-color: #2b2b2b;
 }
 
 .form-group input[readonly] {
@@ -692,5 +765,161 @@ h2 {
   opacity: 0.7;
   pointer-events: none;
   /* 彻底阻止所有子元素的鼠标事件 */
+}
+
+/* --- 现代化 Bento Box 宫格布局 --- */
+.dashboard-page {
+  padding-right: 15px;
+}
+
+.page-title h2 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1d1d1f;
+  margin-bottom: 24px;
+  margin-top: 0;
+}
+
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  /* 变更为3列网格 */
+  gap: 16px;
+  /* 舒适的间距 */
+}
+
+/* 基础卡片样式 */
+.bento-card {
+  background: #f5f5f5;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 5px #20202010;
+  border-radius: 20px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* 核心开关卡片跨2列 */
+.control-card {
+  grid-column: span 2;
+  justify-content: space-between;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.card-title-main {
+  font-size: 20px;
+  font-weight: 600;
+  color: #111;
+}
+
+/* 现代化的状态徽章 (代替大背景) */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 30px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.status-badge.running {
+  background: #e1fdeb;
+  color: #16a34a;
+}
+
+.status-badge.stopped {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.status-badge .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  background: currentColor;
+  /* 跟随文字颜色 */
+}
+
+.subtitle {
+  font-size: 14px;
+  color: #888;
+  margin-bottom: 24px;
+}
+
+.action-area{
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  justify-content: right;
+}
+
+/* 按钮现代化 */
+.modern-btn {
+  font-size: 15px !important;
+  padding: 10px 24px !important;
+  border-radius: 10px !important;
+  font-weight: 500 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.modern-btn.primary {
+  background: #111;
+  color: #fff;
+}
+
+.modern-btn.danger {
+  background: #ff3b30;
+  color: #fff;
+}
+
+.uptime-value {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 26px;
+  font-weight: 600;
+  color: #28c76f;
+  margin-top: 20px;
+}
+
+/* 信息数据排版 */
+.card-label {
+  font-size: 13px;
+  color: #888;
+  margin-bottom: auto;
+  /* 让数据推到底部 */
+}
+
+.info-value {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 17px;
+  font-weight: 600;
+  color: #111;
+  margin-top: 16px;
+}
+
+.remote-text {
+  color: #007aff;
+  /* 给外网地址一点强调色 */
+}
+
+.config-status {
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 16px;
+}
+
+.config-status.ready {
+  color: #16a34a;
+}
+
+.config-status.unready {
+  color: #dc2626;
 }
 </style>
