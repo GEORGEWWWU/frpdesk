@@ -152,6 +152,16 @@ const logs = ref([]);
 const logContainerRef = ref(null);
 let unlistenLog = null;
 
+// 统一处理日志追加与滚动
+const addLog = (message) => {
+  logs.value.push(message);
+  nextTick(() => {
+    if (logContainerRef.value) {
+      logContainerRef.value.scrollTop = logContainerRef.value.scrollHeight;
+    }
+  });
+};
+
 // 初始化时优先从 localStorage 读取
 const appSettings = ref({
   frpcPath: localStorage.getItem('frpcPath') || '',
@@ -271,14 +281,18 @@ const saveConfig = async (showAlert = true) => {
 const startFRP = async () => {
   if (!isReady.value) return;
   try {
-    logs.value = []; // 清空上一次的运行日志
-    await saveConfig(false);
+    logs.value = []; // 每次启动前清空旧日志
+    addLog('=== [系统提示] 正在准备启动 FRP 服务... ===');
+
+    await saveConfig(false); // 静默保存配置
     await invoke('start_frp', {
       execPath: appSettings.value.frpcPath,
       configPath: appSettings.value.configPath
     });
+
     isRunning.value = true;
   } catch (error) {
+    addLog(`=== [系统错误] FRP 启动失败: ${error} ===`);
     alert(error);
   }
 };
@@ -287,7 +301,9 @@ const stopFRP = async () => {
   try {
     await invoke('stop_frp');
     isRunning.value = false;
+    addLog('=== [系统提示] FRP 服务已手动关闭。 ===');
   } catch (error) {
+    addLog(`=== [系统错误] 关闭 FRP 失败: ${error} ===`);
     alert(error);
   }
 };
