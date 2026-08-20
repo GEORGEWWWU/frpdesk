@@ -6,6 +6,8 @@
 use serde::Serialize;
 use std::fs;
 use std::io::{BufRead, BufReader};
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use std::time::Instant; // 用于计算真实运行时长
@@ -52,13 +54,19 @@ fn start_frp(
         return Ok("服务已经在运行".to_string());
     }
 
-    match Command::new(&exec_path)
-        .arg("-c")
+    // 将链式调用拆开，先实例化 Command
+    let mut cmd = Command::new(&exec_path);
+    cmd.arg("-c")
         .arg(&config_path)
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-    {
+        .stderr(Stdio::piped());
+
+    // 仅在 Windows 环境下添加 CREATE_NO_WINDOW (0x08000000) 标志位
+    #[cfg(target_os = "windows")]
+    cmd.creation_flags(0x08000000);
+
+    // 执行 spawn
+    match cmd.spawn() {
         Ok(mut child) => {
             // 开辟新线程读取 stdout 并发送给前端
             if let Some(stdout) = child.stdout.take() {
